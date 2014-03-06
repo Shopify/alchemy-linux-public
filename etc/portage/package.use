@@ -1,0 +1,4 @@
+net-analyzer/nmap ncat
+net-misc/lldpd cdp edf fdp json snmp
+app-admin/sudo offenssive
+sys-apps/lm_sensors sensord

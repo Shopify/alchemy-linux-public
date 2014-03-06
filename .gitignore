@@ -1,0 +1,11 @@
+config.yml
+bin
+bin/
+bin/alchemist.img
+bin/alchemist.ramfs
+cache/*
+*.swp
+distfiles/*.zip
+distfiles/*.tar
+distfiles/*.gz
+distfiles/*.bz2

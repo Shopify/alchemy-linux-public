@@ -1,0 +1,8 @@
+sys-block/tw_cli
+sys-block/hpacucli
+sys-block/mpt-status
+sys-fs/ddrescue
+sys-fs/dd-rescue
+sys-fs/ncdu
+sys-fs/mdadm
+sys-block/parted

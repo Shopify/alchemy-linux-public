@@ -1,0 +1,16 @@
+stage3_url:  https://s3.amazonaws.com/shopify-ops/collins/stage3-latest.tar.xz            # location of the stage3 archive to use
+linux_url:   git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git             # location of the stage3 archive to use
+work_dir:    /tmp             # where we'll put our chroot_dir
+kernel_src:  /usr/src/linux   # where we'll put our chroot_dir
+embed_ramfs: false            # Should we embed the initramfs into the kernel?
+image_name:  alchemy.img      # Name of the kernel image
+ramfs_name:  alchemy.ramfs    # Name of ramfs if made
+kernel_conf: 3.14-b           # Which kernel config to use
+kernel_ver:  v3.14.4          # Kernel version to use (latest if not specified)
+packages:                     # Package classes to install, correspondin to packages.x, example core -> packages.core will be built
+  - core
+  - util
+  - network
+  - benchmark
+  - storage
+  - eula
