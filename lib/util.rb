@@ -123,7 +123,7 @@ eos
     end
 
     # Copy package cache
-    unless not File.directory? local_pkg
+    unless Dir["#{local_pkg}/*"].empty?
       sh "sudo mkdir -p #{pkg_dir}"
       sh "sudo cp -r #{local_pkg}/* #{pkg_dir}"
     end
