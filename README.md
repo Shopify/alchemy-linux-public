@@ -109,6 +109,8 @@ If this is the case, you'll need to determine what hardware is not detected, and
 + wget 
 + ruby
 + git
++ bc (better calculator - required by linux kernel build)
++ build-essential
 
 # Usage
 

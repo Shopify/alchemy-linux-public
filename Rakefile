@@ -3,6 +3,7 @@ require_relative 'lib/util'
 
 $root_dir          = File.dirname(File.expand_path(__FILE__))
 $config_path       = File.dirname(File.expand_path(__FILE__)) + '/config.yml'
+$dependencies      = ['lzma','git','bc','wget','chroot','gcc','cpio','find']
 
 Rake::TaskManager.record_task_metadata = true
 
@@ -14,8 +15,30 @@ namespace :build do
     puts $config.to_yaml
   end
 
+  desc "Check build dependencies"
+  task :check_depends do
+    puts "Checking build dependencies..."
+    $dependencies.each do |depend|
+       begin
+         sh "which #{depend}"
+       rescue
+         puts "Error - missing dependencie #{depend}"
+       end
+    end
+  end
+
+  desc "(re)build the system and initramfs"
+  task :system, [:version] => ["util:seed_image", "util:insert_overlays", "util:bind_chroot"] do | t, args |
+    begin
+      sh "sudo chroot #{$chroot_dir} /bootstrap/setup.sh"
+    ensure
+      Rake::Task["util:post_build"].invoke
+    end
+  end
+
+
   desc "Create the lzma compressed ramfs from the system image"
-  task :ramfs => [:system] do 
+  task :ramfs => [:check_depends, :system] do
     bin_dir = File.join($root_dir, 'bin')
     threads = `nproc`.strip
     sh "mkdir -p #{bin_dir}"
@@ -42,7 +65,7 @@ namespace :build do
   end
 
   desc "(re)build the kernel"
-  task :kernel, [:version] do | t, args |
+  task :kernel, [:version] => [:check_depends] do | t, args |
     cwd = Dir.pwd
     bin_dir = File.join($root_dir, 'bin')
     sh "mkdir -p #{bin_dir}"
@@ -53,6 +76,7 @@ namespace :build do
       version = args[:version]
     end
 
+    sh "sudo chown -R `whoami` #{$config['kernel_src']}"
     unless File.directory? "#{File.join($config['kernel_src'],'.git')}"
       sh "git clone #{$config['linux_url']} #{$config['kernel_src']}"
     end
@@ -70,6 +94,7 @@ namespace :build do
 
     sh "cp #{File.join($root_dir, 'kernels', $config['kernel_conf'])} #{kernel_config}"
     sh "sed -i 's:^CONFIG_LOCALVERSION=.*$:CONFIG_LOCALVERSION=\"Alchemy Linux #{version}\":g' #{kernel_config}"
+    # Used to embed ramfs into kernel, not supported yet
     #sed -i -e "s|^CONFIG_INITRAMFS_SOURCE=.*$|CONFIG_INITRAMFS_SOURCE=\"$RAMFS_FILE\"|" .config
     #[ -n "$CHROOT_DIR" ] && rm -rf $CHROOT_DIR/lib/modules/*
     #sh "make -j`nproc` modules"
@@ -79,15 +104,6 @@ namespace :build do
     sh "make -j`nproc`"
     sh "mv arch/x86/boot/bzImage #{File.join(bin_dir,$config['image_name'])}"
 
-  end
-
-  desc "(re)build the system and initramfs"
-  task :system, [:version] => ["util:seed_image", "util:insert_overlays", "util:bind_chroot"] do | t, args |
-    begin
-      sh "sudo chroot #{$chroot_dir} /bootstrap/setup.sh"
-    ensure
-      Rake::Task["util:post_build"].invoke
-    end
   end
 
   desc "(re)build everything"
