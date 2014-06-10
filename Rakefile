@@ -23,6 +23,7 @@ namespace :build do
          sh "which #{depend}"
        rescue
          puts "Error - missing dependencie #{depend}"
+         exit
        end
     end
   end
@@ -76,6 +77,7 @@ namespace :build do
       version = args[:version]
     end
 
+    sh "sudo mkdir -p #{$config['kernel_src']}"
     sh "sudo chown -R `whoami` #{$config['kernel_src']}"
     unless File.directory? "#{File.join($config['kernel_src'],'.git')}"
       sh "git clone #{$config['linux_url']} #{$config['kernel_src']}"
@@ -119,7 +121,26 @@ desc "Print a detailed help with usage examples"
 task :help do
 
   help = <<-eos
-Stub
+
+The repository is for building and customizing Alchemy Linux.
+
+Check config.yml.example for a sample configuration.
+
+To perform a full build:
+
+  rake build:all[version] # the version param is optional
+
+To build just the system:
+
+  rake build:ramfs
+
+To build just the kernel:
+
+  rake build:kernel
+
+To clean up:
+
+  rake util:clean
   eos
   puts help
 
