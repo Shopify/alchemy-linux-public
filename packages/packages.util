@@ -1,7 +1,0 @@
-app-misc/tmux
-app-misc/screen
-app-editors/vim
-app-shells/dash
-sys-apps/ack
-sys-apps/edac-utils
-sys-process/numactl
