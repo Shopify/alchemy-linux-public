@@ -9,3 +9,4 @@ distfiles/*.zip
 distfiles/*.tar
 distfiles/*.gz
 distfiles/*.bz2
+_site

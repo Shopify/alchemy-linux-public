@@ -1,0 +1,24 @@
+# Dependencies
+markdown:         redcarpet
+highlighter:      pygments
+
+# Permalinks
+permalink:        pretty
+
+# Setup
+title:            Alchemy Transmuter
+tagline:          ''
+description:      ''
+url:              http://shopify.github.io/alchemy-linux-public
+baseurl:          http://shopify.github.io/alchemy-linux-public
+paginate:         5
+
+author:
+  name:           'Dale Hamel'
+  url:            https://github.com/dalehamel
+
+# Custom vars
+version:          0.0.1
+
+github:
+  repo:           https://github.com/Shopify/alchemy-linux-public
