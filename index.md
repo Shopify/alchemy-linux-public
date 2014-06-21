@@ -3,30 +3,24 @@ layout: default
 title: Home
 ---
 
+# Automate Baremetal Tasks
 
-# Automate Baremetal Operations
+Simple put, the Alchemy Linux is a dumb job runner. It takes retrieves commands form kernel parameter, "command\_url", and runs them.
 
-Simple put, the Alchemy Transmuter is a tool to dynamically render [iPXE](http://ipxe.org/) menus, to carry out various tasks on baremetal servers.
+More generally, Alchemy Linux is a swiss-army knife, designed to run entirely in memory, and perform numerous tasks.
 
-Tasks are implemented as "Alchemy Spells", which is ruby code following a simple template.
+A key feature of Alchemy Linux is it is designed to be extremely easy to customize, as it is based on the Portage package manager, used by [CoreOS](https://coreos.com/) and [ChromeOS](http://en.wikipedia.org/wiki/Chrome_OS), as well as the [Gentoo](https://www.gentoo.org/) and [Funtoo](http://www.funtoo.org/Welcome) Linux distributions. Packgase are available from numerous official sources, as well as user contirbuted overlays.
 
-The modular architecture of the Alchemy Transmuter enables you to write simple ruby code, erb templates, and yaml configurations for each task you need to perform.
-
-The Alchemy Transmuter HTTP interface is documented [here](doc/TransmuterHTTP.html).
+Alchemy Linux is designed to be PXE booted, but should also support Syslinux or Grub (this has not been tested).
 
 # Applications
 
-Alchemy Transmuter is designed to perform the following operations:
+Alchemy Linux is designed to perform the following operations:
 
-+ Intake (currenty supporting [collins](http://shopify.github.io/collins/), but it should be relative easy to add other Sources of Truth)
-+ Burnin - inspired by [stresslinux](http://www.stresslinux.org/sl/) and [breakin](http://www.advancedclustering.com/software/breakin.html)
-+ OS installs 
- + Ubuntu via dynamically rendered preseeds
- + CoreOS via dynamically rendered CloudConfig
- + RHEL support could be added by dynamically rendering Kickstart configs
-+ Chef / Puppet bootstrapping
-+ Health / diagnostics via Memtest.
-+ Execute arbitrary scripts on servers with no OS.
++ Intake (currenty supporting [collins](http://shopify.github.io/collins/) via the [Alchemy Transmuter](http://shopify.github.io/alchemy-transmuter-public/)
++ Burnin, using tools like mprime, stress, stressapptest, and many more.
++ System recovery
++ System diagnostics
++ Automated job dispatching via [Alchemy Transmuter](http://shopify.github.io/alchemy-transmuter-public/)
 
-All of the above are implemented as spells, which can be chained into one another. This allows you to flow from Intake, into Burnin, into an OS install, and finally a base bootstrapp via a configuration management system like Chef or Puppet.
-
+In the worst case scenario, Alchemy Linux acts as a simple PXE based rescue CD.
