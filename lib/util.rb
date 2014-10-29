@@ -11,11 +11,11 @@ namespace :util do
   task :bind_chroot do
     $bind_mounts.each do | dir |
       bind = "#{$chroot_dir}/#{dir}"
-      sh "sudo mkdir -p #{bind}" 
-      sh "sudo mount --bind /#{dir} #{bind}" 
+      sh "sudo mkdir -p #{bind}"
+      sh "sudo mount --bind /#{dir} #{bind}"
     end
-    sh "sudo mkdir -p #{$chroot_dir}/proc" 
-    sh "sudo mount -t proc none #{$chroot_dir}/proc" 
+    sh "sudo mkdir -p #{$chroot_dir}/proc"
+    sh "sudo mount -t proc none #{$chroot_dir}/proc"
   end
 
   desc "Unmount bind-mounted chroot directories"
@@ -42,8 +42,11 @@ namespace :util do
   task :fetch_stage do
     cache  = File.join($root_dir, 'cache' )
     stage3 = File.basename($config['stage3_url'])
-    sh "sudo mkdir -p #{$chroot_dir}"
-    sh "sudo chown -R `whoami` #{$config['work_dir']}"
+
+    unless File.directory? $chroot_dir
+      sh "sudo mkdir -p #{$chroot_dir}"
+      sh "sudo chown -R `whoami` #{$config['work_dir']}"
+    end
 
     # Fetch the stage3 if we don't have it cached
     unless File.exist? File.join(cache, stage3)
@@ -66,7 +69,7 @@ namespace :util do
     overlay_dir = File.join($chroot_dir, '/usr/local/portage')
     local_overlays = File.join($root_dir,'overlays')
     sh "sudo mkdir -p #{overlay_dir}"
-    if $config.has_key? 'overlays' 
+    if $config.has_key? 'overlays'
       $config['overlays'].each do |overlay|
         base = File.basename( overlay ).gsub('.git','')
         clone_dir = File.join(overlay_dir, base)
@@ -79,7 +82,7 @@ namespace :util do
       if File.directory? node
         next if node == '.' or node == '..'
         overlay = File.join(local_overlays, node)
-        sh "sudo cp -r #{overlay} #{overlay_dir}" 
+        sh "sudo cp -r #{overlay} #{overlay_dir}"
         overlays.push(overlay)
       end
     end

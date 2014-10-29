@@ -5,3 +5,4 @@ app-shells/dash
 sys-apps/ack
 sys-apps/edac-utils
 sys-process/numactl
+net-misc/sshpass

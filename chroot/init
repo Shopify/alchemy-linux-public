@@ -1,12 +1,11 @@
 #!/bin/sh
 
 user_shell () {
-  echo ''
-  echo '  Entering rescue shell.'
-  echo '  Type setinit followed by the init command you would like.'
-  echo '     ex: setinit init'
-  echo '  Exit shell to continue booting.'
+  busybox mount -t tmpfs dev /dev
+  mkdir -p /dev/pts
+  busybox mount -t devpts devpts /dev/pts
 
+  echo '  Entering rescue shell.'
   setsid cttyhack sh
   /bin/busybox sh
 
@@ -14,9 +13,6 @@ user_shell () {
 
 sys_init () {
 
-  busybox mount -t tmpfs dev /dev
-  mkdir -p /dev/pts
-  busybox mount -t devpts devpts /dev/pts
   busybox mount -t proc proc /proc
   busybox mount -t sysfs sysfs /sys
   echo "mdev" > /proc/sys/kernel/hotplug
@@ -32,44 +28,9 @@ sys_deinit () {
   rm /dev/null
   umount -l /proc
   umount -l /sys
-  umount -l /dev/pts 
-  rmdir /dev/pts
-  umount -l /dev
 
 }
 
-init_ssh () {
-  ssh-keygen -A
-  /usr/sbin/sshd -f /etc/ssh/sshd_config
-}
-
-init_lldpd () {
-  lldpd -rx
-}
-
-# This can probably be smarter - rather than just sleeping we should check that we actually have established a link.
-# This way we can set a longer timeout, and short circuit during a check if the link has been established.
-init_net () {
-  for i in /sys/class/net/eth*; do
-    iface=`basename $i`
-    ifconfig $iface up
-  done
-  echo "Sleeping for a bit to allow the interfaces to initialize..."
-  sleep 5s
-  for i in /sys/class/net/eth*; do
-    iface=`basename $i`
-    if [ "`cat $i/carrier`" == "1" ]; then
-      udhcpc -i $iface 
-      if ifconfig $iface | grep -q 'inet addr'; then
-          echo "Got an address on interface $i"
-        break
-      fi
-    else
-      echo "No link detected on $i...skipping"
-    fi
-  done
-
-}
 
 main () {
   export PATH=/bin:/sbin:/usr/bin:/usr/sbin
@@ -77,39 +38,21 @@ main () {
   INIT_ARGS="$(awk '{gsub(/[[:graph:]]+=[[:graph:]]+/,""); print}' /proc/cmdline)"
   # remove any initramfs commands from INIT_ARGS
   INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/shell/,""); print}')"
-  INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/ssh/,""); print}')"
-  INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/lldpd/,""); print}')"
-  INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/net/,""); print}')"
   INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/init_debug/,""); print}')"
-  INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/real_init/,""); print}')"
   INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/ssh_key/,""); print}')"
   INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/command_url/,""); print}')"
+  REAL_ROOT='/tmp/realroot'
 
   export $INIT_ARGS
-
-  # Fix permissions on admin user
-  chown -R `cat /etc/adminuser` /home/`cat /etc/adminuser`
 
   # Parse out kernel arguments
   for arg in $(cat /proc/cmdline); do
     case $arg in
+      init_debug)
+        DEBUG=yes
+        ;;
       shell)
         EXEC_SHELL=yes
-        ;;
-      ssh)
-        SSH=yes
-        ;;
-      lldpd)
-        LLDPD=yes
-        ;;
-      net)
-        NET=yes
-        ;;
-      init_debug)
-        DEBUG=yes 
-        ;;
-      real_init=*)
-        REAL_INIT="${arg#*=}"
         ;;
       ssh_keys_url=*)
         SSH_KEY_URL="${arg#*=}"
@@ -121,46 +64,25 @@ main () {
     esac
   done
 
-  # Read the admin username
-  admin=`cat /etc/adminuser`
+  mkdir $REAL_ROOT
+  mount -o loop /system.img $REAL_ROOT
 
-  # Process anything specified by a kernel arg we handle - order is very important.
+  # Process anything specified by a kernel arg we handle
   [ "$DEBUG" == "yes" ] && set -x
-  [ "$NET" == "yes" ] && init_net
-  [ "$SSH" == "yes" ] && init_ssh
-  [ "$LLDPD" == "yes" ] && init_lldpd
-  [ -n "$REAL_INIT"  ] && echo "$REAL_INIT" > /runinit
-  [ -n "$SSH_KEY_URL"  ] && mkdir -p /home/$admin/.ssh/ && curl "$SSH_KEY_URL" >> /home/$admin/.ssh/authorized_keys && chmod 600 /home/$admin/.ssh/authorized_keys
-  [ -n "$CMD_URL"  ] && curl "$CMD_URL" > /etc/local.d/01-transmuter.start && chmod +x /etc/local.d/01-transmuter.start
+  [ -n "$SSH_KEY_URL"  ] && echo "$SSH_KEY_URL" > $REAL_ROOT/etc/key_url
+  if [ -n "$CMD_URL"  ];then
+    echo "curl $CMD_URL > /tmp/bootstrap; bash /tmp/bootstrap" > $REAL_ROOT/etc/local.d/01-bootstrap.start
+    chmod +x $REAL_ROOT/etc/local.d/01-bootstrap.start
+  fi
 
   if [ "$EXEC_SHELL" == "yes" ];then
-    sys_init
     user_shell
   fi
 
-  # If we don't want to run a full /sbin/init, we still need to exec CMD_URL
-  if [ "$REAL_INIT" == "/init" ];then
-    if [ -e /etc/local.d/01-transmuter.start ]; then
-      /bin/sh /etc/local.d/01-transmuter.start
-    fi
-  # Else we'll run the full init, or ask for an init to be specified
-  else
-    SUCCESS=0
-    while [ $SUCCESS -ne 1 ]
-    do
-      if [ -e "/runinit" ];then
-        RUNINIT="`cat /runinit`"
-        sys_deinit
-        if ! exec $RUNINIT;then
-          sys_init
-          user_shell
-        else
-          SUCCESS=1
-        fi
-      else
-        user_shell
-      fi
-    done
+  sys_deinit
+  if ! exec switch_root $REAL_ROOT /sbin/init ;then
+    echo "Pivoting to new sytem failed :( you're on your own, good luck!"
+    user_shell
   fi
 }
 
