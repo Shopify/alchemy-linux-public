@@ -22,14 +22,7 @@ mkdir -p /usr/portage/packages
 emerge_world
 
 # Come on, who uses anything else?
-eselect editor set vi 
-
-# We don't need it
-echo "" > /etc/fstab
-
-echo '#!/bin/sh' > /bin/setinit
-echo 'echo "$@" > /runinit' >> /bin/setinit
-chmod +x /bin/setinit
+eselect editor set vi
 
 # IMPORTANT: Enable serial console so we can login via IPMI
 # Uncomment s0
@@ -60,6 +53,6 @@ set -e
 
 
 # Prepare /init
-ln -sf /bin/busybox /bin/sh 
+ln -sf /bin/busybox /bin/sht 
 cp $DIR/init /
 chmod +x /init

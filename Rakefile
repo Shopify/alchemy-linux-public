@@ -44,6 +44,9 @@ namespace :build do
     bin_dir = File.join($root_dir, 'bin')
     threads = `nproc`.strip
     sh "mkdir -p #{bin_dir}"
+    if Dir.exist? $ramfs_mount
+      sh "sudo rm -rf #{$ramfs_mount}"
+    end
     sh "mkdir -p #{$ramfs_mount}"
     sh "mkdir -p #{$ramfs_dir}"
 
@@ -68,6 +71,8 @@ namespace :build do
       -path ./usr/share/gtk-doc -prune -o \
       -path ./usr/share/man -prune -o \
       -path ./tmp -prune -o \
+      -path ./mnt -prune -o \
+      -path ./etc -prune -o \
       -path ./packages -prune -o \
       -path ./var/tmp -prune -o \
       -path ./usr/portage -prune -o \
@@ -76,19 +81,23 @@ namespace :build do
       -path ./usr/share/mime -prune -o \
       -print | grep -v include > #{$ramfs_dir}/contents"
 
-    size =`cat #{$ramfs_dir}/contents | sudo du -ks | awk '{print $1}'`.to_i # 1024 is the block size output of du with -k option
-    size_bytes = ( size/1024 + $config['loopback']['buffer'] ) * 1024
-    blocks = size_bytes / $config['loopback']['bs']
-    #sh "sudo umount #{$ramfs_dir}/system.img"
-    sh "sudo dd if=/dev/zero of=#{$ramfs_dir}/system.img bs=#{$config['loopback']['bs']}K count=#{blocks}"
-    sh "sudo mkfs.ext4 -i 4096 #{$ramfs_dir}/system.img"
-    sh "sudo mount -o loop #{$ramfs_dir}/system.img #{$ramfs_mount}"
-    sh "cat #{$ramfs_dir}/contents | sudo tar -cpf - -T -  | sudo tar -C #{$ramfs_mount} -xpf -" # copy system to loopback via tarpipe
-    sh "sudo umount #{$ramfs_mount}"
+    sh "cat #{$ramfs_dir}/contents | sudo tar  --no-recursion -cpf - -T -  | sudo tar -C #{$ramfs_mount} -xpf -" # copy system to loopback via tarpipe
+
+    # Set up some tmpfs stuff
+    sh "sudo mkdir  #{$ramfs_mount}/tmp"
+    sh "sudo mkdir  #{$ramfs_mount}/mnt"
+    sh "sudo mkdir  #{$ramfs_mount}/etc"
+    sh "sudo mkdir -p #{$ramfs_dir}/etc"
+    sh "sudo cp -r #{$chroot_dir}/etc/* #{$ramfs_dir}/etc/"
+
+    if File.exist? "#{$ramfs_dir}/system.img"
+      sh "sudo rm #{$ramfs_dir}/system.img"
+    end
+    sh "sudo mksquashfs #{$ramfs_mount} #{$ramfs_dir}/system.img"
 
     # Generate the ramfs containing bootstrap init, and loopback system.img
     Dir.chdir( $ramfs_dir )
-    sh "find . | sudo cpio -H newc -ov -R 0:0 | lzma -T #{threads} -9 > #{File.join(bin_dir, $config['ramfs_name'])}"
+    sh "find . | sudo cpio -H newc -ov -R 0:0 | lzma -T #{threads} -0 > #{File.join(bin_dir, $config['ramfs_name'])}"
     Dir.chdir( pwd )
   end
 

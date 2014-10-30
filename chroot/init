@@ -13,8 +13,14 @@ user_shell () {
 
 sys_init () {
 
+  mkdir /proc
+  mkdir /sys
+  mkdir /dev
+  mkdir /etc
+  busybox mount -t tmpfs dev /dev
   busybox mount -t proc proc /proc
   busybox mount -t sysfs sysfs /sys
+
   echo "mdev" > /proc/sys/kernel/hotplug
   echo 0 > /proc/sys/kernel/printk
   mknod /dev/null c 1 3
@@ -26,14 +32,14 @@ sys_deinit () {
 
   echo "" > /proc/sys/kernel/hotplug
   rm /dev/null
-  umount -l /proc
-  umount -l /sys
+  #umount -l /proc
+  #umount -l /sys
+  #rmdir /proc
+  #rmdir /sys
 
 }
 
-
 main () {
-  export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
   INIT_ARGS="$(awk '{gsub(/[[:graph:]]+=[[:graph:]]+/,""); print}' /proc/cmdline)"
   # remove any initramfs commands from INIT_ARGS
@@ -42,8 +48,6 @@ main () {
   INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/ssh_key/,""); print}')"
   INIT_ARGS="$(echo $INIT_ARGS | awk '{gsub(/command_url/,""); print}')"
   REAL_ROOT='/tmp/realroot'
-
-  export $INIT_ARGS
 
   # Parse out kernel arguments
   for arg in $(cat /proc/cmdline); do
@@ -64,28 +68,53 @@ main () {
     esac
   done
 
-  mkdir $REAL_ROOT
-  mount -o loop /system.img $REAL_ROOT
-
-  # Process anything specified by a kernel arg we handle
-  [ "$DEBUG" == "yes" ] && set -x
-  [ -n "$SSH_KEY_URL"  ] && echo "$SSH_KEY_URL" > $REAL_ROOT/etc/key_url
-  if [ -n "$CMD_URL"  ];then
-    echo "curl $CMD_URL > /tmp/bootstrap; bash /tmp/bootstrap" > $REAL_ROOT/etc/local.d/01-bootstrap.start
-    chmod +x $REAL_ROOT/etc/local.d/01-bootstrap.start
-  fi
+  mkdir -p $REAL_ROOT
+  mount -o loop -t squashfs /system.img $REAL_ROOT
 
   if [ "$EXEC_SHELL" == "yes" ];then
     user_shell
   fi
 
+  ls $REAL_ROOT
   sys_deinit
+  ls $REAL_ROOT
+
+  mkdir /newetc
+  mkdir /newtmp
+  mkdir /run
+  mkdir /lock
+
+  # Create tmp systems
+  mount -t tmpfs tmpfs /newtmp
+  mount -t tmpfs tmpfs /newetc
+  mount -t tmpfs tmpfs /run
+  mount -t tmpfs tmpfs /lock
+
+
+  # System mounts
+  mount --move /newtmp $REAL_ROOT/tmp
+  mount --move /run $REAL_ROOT/run
+  mount --move /lock $REAL_ROOT/var/lock
+
+  # Set up etc
+  cp -r etc/* /newetc
+  mount --move /newetc $REAL_ROOT/etc
+
+  # Process anything specified by a kernel arg we handle
+  [ -n "$SSH_KEY_URL"  ] && echo "$SSH_KEY_URL" > $REAL_ROOT/tmp/key_url
+  if [ -n "$CMD_URL"  ];then
+    echo "curl $CMD_URL > /tmp/bootstrap; bash /tmp/bootstrap" > $REAL_ROOT/etc/local.d/01-bootstrap.start
+    chmod +x $REAL_ROOT/etc/local.d/01-bootstrap.start
+  fi
+
   if ! exec switch_root $REAL_ROOT /sbin/init ;then
     echo "Pivoting to new sytem failed :( you're on your own, good luck!"
     user_shell
   fi
 }
 
+set -x
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 sys_init
 trap 'user_shell' SIGHUP SIGINT SIGTERM
 main
