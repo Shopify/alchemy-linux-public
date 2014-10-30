@@ -32,10 +32,10 @@ sys_deinit () {
 
   echo "" > /proc/sys/kernel/hotplug
   rm /dev/null
-  #umount -l /proc
-  #umount -l /sys
-  #rmdir /proc
-  #rmdir /sys
+  umount -l /proc
+  umount -l /sys
+  rmdir /proc
+  rmdir /sys
 
 }
 
@@ -75,9 +75,6 @@ main () {
     user_shell
   fi
 
-  ls $REAL_ROOT
-  sys_deinit
-  ls $REAL_ROOT
 
   mkdir /newetc
   mkdir /newtmp
@@ -100,12 +97,36 @@ main () {
   cp -r etc/* /newetc
   mount --move /newetc $REAL_ROOT/etc
 
+  echo "Preparing network interfaces"
+  has_if=0
+  until [ $has_if -eq 1 ];do
+
+    for i in /sys/class/net/eth*; do
+      iface=`basename $i`
+      ifconfig $iface up
+    done
+
+    # Prepare network interfaces where a link was found
+    for interface in `ls -1 /sys/class/net/ | grep '^eth' `; do
+      if [ "`cat /sys/class/net/$interface/carrier`" == "1" ];then
+        has_if=1
+        echo 'template=dhcpcd' > $REAL_ROOT/etc/conf.d/netif.$interface
+        chroot $REAL_ROOT ln -s /etc/init.d/netif.tmpl /etc/init.d/netif.$interface
+        chroot $REAL_ROOT rc-update add netif.$interface default
+        break
+      fi
+    done
+  done
+
+
   # Process anything specified by a kernel arg we handle
   [ -n "$SSH_KEY_URL"  ] && echo "$SSH_KEY_URL" > $REAL_ROOT/tmp/key_url
   if [ -n "$CMD_URL"  ];then
     echo "curl $CMD_URL > /tmp/bootstrap; bash /tmp/bootstrap" > $REAL_ROOT/etc/local.d/01-bootstrap.start
     chmod +x $REAL_ROOT/etc/local.d/01-bootstrap.start
   fi
+
+  sys_deinit
 
   if ! exec switch_root $REAL_ROOT /sbin/init ;then
     echo "Pivoting to new sytem failed :( you're on your own, good luck!"

@@ -1,1 +1,2 @@
 tmpfs       /mnt        tmpfs  defaults        0 0
+sysfs       /sys        sysfs  defaults        0 0

@@ -97,7 +97,7 @@ namespace :build do
 
     # Generate the ramfs containing bootstrap init, and loopback system.img
     Dir.chdir( $ramfs_dir )
-    sh "find . | sudo cpio -H newc -ov -R 0:0 | lzma -T #{threads} -0 > #{File.join(bin_dir, $config['ramfs_name'])}"
+    sh "sudo find . | sudo cpio -H newc -ov -R 0:0 | lzma -T #{threads} -0 > #{File.join(bin_dir, $config['ramfs_name'])}"
     Dir.chdir( pwd )
   end
 
@@ -136,8 +136,10 @@ namespace :build do
     sh "echo 'y' | make oldconfig"
     sh "make -j`nproc`"
     sh "make -j`nproc` modules"
-    sh "INSTALL_MOD_PATH=#{$chroot_dir} sudo make modules_install"
+    puts Dir.pwd
+    sh "bash -c 'INSTALL_MOD_PATH=#{$chroot_dir} sudo make modules_install'"
     sh "mv arch/x86/boot/bzImage #{File.join(bin_dir,$config['image_name'])}"
+    Dir.chdir(cwd)
 
   end
 
