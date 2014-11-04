@@ -122,7 +122,7 @@ main () {
   # Process anything specified by a kernel arg we handle
   [ -n "$SSH_KEY_URL"  ] && echo "$SSH_KEY_URL" > $REAL_ROOT/tmp/key_url
   if [ -n "$CMD_URL"  ];then
-    echo "curl $CMD_URL > /tmp/bootstrap; bash /tmp/bootstrap" > $REAL_ROOT/etc/local.d/01-bootstrap.start
+    echo "curl '$CMD_URL' > /tmp/bootstrap; bash /tmp/bootstrap" > $REAL_ROOT/etc/local.d/01-bootstrap.start
     chmod +x $REAL_ROOT/etc/local.d/01-bootstrap.start
   fi
 

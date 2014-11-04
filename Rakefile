@@ -137,7 +137,7 @@ namespace :build do
     sh "make -j`nproc`"
     sh "make -j`nproc` modules"
     puts Dir.pwd
-    sh "bash -c 'INSTALL_MOD_PATH=#{$chroot_dir} sudo make modules_install'"
+    sh "sudo bash -c 'INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=#{$chroot_dir} make modules_install'"
     sh "mv arch/x86/boot/bzImage #{File.join(bin_dir,$config['image_name'])}"
     Dir.chdir(cwd)
 
