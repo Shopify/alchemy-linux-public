@@ -54,6 +54,7 @@ main () {
     case $arg in
       init_debug)
         DEBUG=yes
+        set -x
         ;;
       shell)
         EXEC_SHELL=yes
@@ -80,18 +81,21 @@ main () {
   mkdir /newtmp
   mkdir /run
   mkdir /lock
+  mkdir /log
 
   # Create tmp systems
   mount -t tmpfs tmpfs /newtmp
   mount -t tmpfs tmpfs /newetc
   mount -t tmpfs tmpfs /run
   mount -t tmpfs tmpfs /lock
+  mount -t tmpfs tmpfs /log
 
 
   # System mounts
   mount --move /newtmp $REAL_ROOT/tmp
   mount --move /run $REAL_ROOT/run
   mount --move /lock $REAL_ROOT/var/lock
+  mount --move /log $REAL_ROOT/var/log
 
   # Set up etc
   cp -r etc/* /newetc
@@ -134,7 +138,6 @@ main () {
   fi
 }
 
-set -x
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 sys_init
 trap 'user_shell' SIGHUP SIGINT SIGTERM
