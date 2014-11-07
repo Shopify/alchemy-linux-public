@@ -83,6 +83,10 @@ main () {
   mkdir /lock
   mkdir /log
 
+  mkdir -p /lib/firmware
+  mount --bind $REAL_ROOT/lib/firmware /lib/firmware
+
+
   # Create tmp systems
   mount -t tmpfs tmpfs /newtmp
   mount -t tmpfs tmpfs /newetc
@@ -106,8 +110,14 @@ main () {
   until [ $has_if -eq 1 ];do
 
     for i in /sys/class/net/eth*; do
-      iface=`basename $i`
-      ifconfig $iface up
+      if [ -d $i ];then
+        iface=`basename $i`
+        echo "Attempting to bring up $iface"
+        ifconfig $iface up
+      else
+        echo "No network interfaces exist! bailing out."
+        user_shell
+      fi
     done
 
     # Prepare network interfaces where a link was found
@@ -130,6 +140,7 @@ main () {
     chmod +x $REAL_ROOT/etc/local.d/01-bootstrap.start
   fi
 
+  umount /lib/firmware
   sys_deinit
 
   if ! exec switch_root $REAL_ROOT /sbin/init ;then
