@@ -6,3 +6,6 @@ sys-apps/ack
 sys-apps/edac-utils
 sys-process/numactl
 net-misc/sshpass
+sys-boot/lilo
+sys-apps/gptfdisk
+sys-process/lsof

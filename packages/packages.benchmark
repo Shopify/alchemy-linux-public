@@ -7,4 +7,5 @@ app-benchmarks/bonnie++
 app-benchmarks/ramspeed
 app-admin/hddtemp
 dev-util/stressapptest
-sci-mathematics/gimps 
+sci-mathematics/gimps
+sys-block/fio
